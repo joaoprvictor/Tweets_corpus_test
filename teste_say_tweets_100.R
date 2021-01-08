@@ -3,82 +3,88 @@
 # and on "https://github.com/rajkumarjagdale/Extracting-Tweets-from-Twitter-Using-R"
 
 
-rm(list=ls())  # removes all objects from the current workspace (R memory)
-
 # carregar pacotes
 install.packages("Rtools")
 library(Rtools)
+install.packages("twitteR")
 library(twitteR)
+install.packages("ROAuth")
 library(ROAuth)
 install.packages("RCurl")
 library(RCurl)
 install.packages("httr")
-library(httr)                
+library(httr)
+library(tidyverse)
+library(tidytext)
 
 # importando os APIs
-consumerKey = "XXXXXXXXXX"
-consumerSecret = "XXXXXXXXXX"
-accessToken = "XXXXXXXXXX"
-accessSecret = "XXXXXXXXXX"
+consumerKey = "Gyj1h5odB016PKZd3xw7YTDLU"
+consumerSecret = "ZlmjrQSlWWw00kgMENh2Zkj47dGnGqTRUavQTgnN5INgI6kiHr"
+accessToken = "724276541560070145-gb1nsV2PGmSOPK2V4lt0bD49CO7ydXN"
+accessSecret = "IgsY2wmyRvgwKQJVevTnuuOgMikzuI1UpIFrIb3pwWK6Q"
 
 #setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
 setup_twitter_oauth(consumerKey, consumerSecret, 
                     accessToken, accessSecret)
 
-sayTweets = searchTwitter("say",lang = "en", n = 100)
+#Collecting the data
+sayTweets = searchTwitter("say", lang = "en", n = 400)
 length(sayTweets)
 
-tweets_df = twListToDF(sayTweets)
+#putting into a DF
+sayTweets_df = twListToDF(sayTweets)
 
-write.csv(tweets_df, file = "C:\\Users\\joaop\\OneDrive\\Documents\\tweets\\sayTweets.csv", 
+#exporting a df
+write.csv(sayTweets_df, file = "sayTweets.csv", 
           row.names=F)
-
 
 # inspect and clean
 ##count tweets by user
-tweets_df %>%
+sayTweets_df %>%
   count(screenName)
 
 ## get min and max of dates tweets were created by users
-tweets_df %>%
+sayTweets_df %>%
   group_by(screenName) %>%
   summarise(begin = min(created),
             end = max(created))
 
 ## filter out (!) anything that is a retweet
-original_tweets <- tweets_df %>%
+original_sayTweets <- sayTweets_df %>%
   filter(!isRetweet)
 
 ## count tweets by user for original tweets
-original_tweets %>%
+original_sayTweets  %>%
   count(screenName)
 
 # Tokenize text
 ## reduce the number of variables in our data,
-tweets_smaller <- original_tweets %>%
+sayTweets_smaller <- original_sayTweets %>%
   select(text, screenName,
          favoriteCount, retweetCount, id)
+
 ## tokenize words
-tweets_tokenized <- tweets_smaller %>%
+sayTweets_tokenized <- sayTweets_smaller %>%
   unnest_tokens(word, text)
 
 ## inspect data
-tweets_tokenized %>%
+sayTweets_tokenized %>%
   head()
 
 ## tokenize bigrams
-tweets_bigrams <- tweets_smaller %>%
+tweets_bigrams <- sayTweets_smaller %>%
   unnest_tokens(ngram, text, token = "ngrams", n = 2)
 
 ## inspect data
 tweets_bigrams %>%
   head()
 
-subcorpora_size <- tweets_tokenized %>%
+## how much does each user contribute in terms of tokens?
+saySubcorpora_size <- sayTweets_tokenized %>%
   count(screenName)
 
 ## inspect data
-subcorpora_size
+saySubcorpora_size
 
 ## check stop_words data frame
 stop_words %>%
@@ -93,37 +99,37 @@ stop_words %>%
 my_stop_words <- stop_words %>%
   filter(lexicon == "snowball")
 
-## remove stop words from pencil reviews tokenized
-tweets_tokenized_clean <- tweets_tokenized %>%
+## remove stop words from tweets - tokenized
+sayTweets_tokenized_clean <- sayTweets_tokenized %>%
   anti_join(my_stop_words)
 
 # arrange count so we see most frequent words first
-tweets_tokenized_clean %>%
+sayTweets_tokenized_clean %>%
   count(word, screenName) %>%
   arrange(-n) %>%
   head()
 
 # remove not word tokens
-tokens_to_remove <- c("https", "t.co", "amp", "et")
+tokens_to_remove <- 
 
 ## remove stop words from tweets tokenized
-tweets_tokenized_clean <- tweets_tokenized_clean %>%
+sayTweets_tokenized_clean <- sayTweets_tokenized_clean %>%
   filter(!(word %in% tokens_to_remove))
 
 ## arrange count so we see most frequent words first
-tweets_tokenized_clean %>%
+sayTweets_tokenized_clean %>%
   count(word, screenName) %>%
   arrange(-n) %>%
   head()
 
 # looks good, create word_frequency_per_user data frame
-word_frequency_per_user <- tweets_tokenized_clean %>%
+sayWord_frequency_per_user <- sayTweets_tokenized_clean %>%
   count(word, screenName)
 
 ## Plotting the data makes it easier to compare frequent tokens 
 ## across different users.
 
-word_frequency_per_user %>%
+sayWord_frequency_per_user %>%
   group_by(screenName) %>%
   top_n(2) %>%
   ggplot(aes(x = n, 
@@ -134,30 +140,29 @@ word_frequency_per_user %>%
   labs(y = "")
 
 ## change the n in the column name to total
-subcorpora_size <- subcorpora_size %>%
+saySubcorpora_size <- saySubcorpora_size %>%
   rename(total = n)
 
 ## inspect subcopora_size again
-subcorpora_size
+saySubcorpora_size
 
 ##We can now join subcorpora_size with our word_frequency_per_user 
 ##data frame by the column they have in common, which is screenName.
 
-word_frequency_per_user <- left_join(word_frequency_per_user,
-                                     subcorpora_size)
-
+sayWord_frequency_per_user <- left_join(sayWord_frequency_per_user,
+                                     saySubcorpora_size)
 
 ##create a new column with normalized frequency using mutate().
-word_frequency_per_user <- word_frequency_per_user  %>%
+sayWord_frequency_per_user <- sayWord_frequency_per_user  %>%
   mutate(n_norm = (n/total)*10000)
 
 ## inspect data
-word_frequency_per_user %>%
+sayWord_frequency_per_user %>%
   head()
 
 ## Plot the data again, but by normalized frequency.
 
-word_frequency_per_user %>%
+sayWord_frequency_per_user %>%
   group_by(screenName) %>%
   top_n(20) %>%
   ggplot(aes(x = n_norm, 
@@ -175,36 +180,36 @@ word_frequency_per_user %>%
 #other documents in that collection.
 
 # calculate tf-idf based on n, providing the word column and the category col
-word_tf_idf <- word_frequency_per_user %>%
+sayWord_tf_idf <- sayWord_frequency_per_user %>%
   bind_tf_idf(word, screenName, n)
 
 # inspect data
-word_tf_idf %>%
+sayWord_tf_idf %>%
   head()
 
 #We can also add range, to decide what words to keep 
 #and understand tf-idf a little better.
 
 ## calculate range per word (status_id indicates individual tweets)
-word_range <- tweets_tokenized_clean %>%
+sayWord_range <- sayTweets_tokenized_clean %>%
   distinct(word, id) %>%
   count(word) %>%
   rename(range = n)
 
 ## add range to data frame with left_join
-word_tf_idf <- left_join(word_tf_idf, word_range)
-                         
+sayWord_tf_idf <- left_join(word_tf_idf, word_range)
+
 ## inspect data
-word_tf_idf %>%
+sayWord_tf_idf %>%
   head()
-              
+
 # what's the mean range?
 mean(word_tf_idf$range)
 
 ## Plotting it again, by tf-idf filtering by range.
 
-word_tf_idf %>%
-  filter(range > 5) %>%
+sayWord_tf_idf %>%
+  filter(range > 4) %>%
   group_by(screenName) %>%
   top_n(n = 10, wt = tf_idf) %>%
   ggplot(aes(x = tf_idf, 
@@ -214,18 +219,17 @@ word_tf_idf %>%
   scale_y_reordered() +
   labs(y = "")
 
-
 # Corpus searching
-searchExpression = "say"
+say = "say"
 
-original_tweets %>%  
-  filter(grepl(searchExpression, text)) %>%
+original_sayTweets %>%  
+  filter(grepl(say, text)) %>%
   head() %>%
   pull(text)
 
 ## use the tokenized data frame to retrieve KWIC.
-tweets_tokenized %>%  
-  mutate(kwic = ifelse(word == searchExpression,
+sayTweets_tokenized %>%  
+  mutate(kwic = ifelse(word == say,
                        TRUE, FALSE)) %>%
   mutate(before = paste(lag(word, 3), lag(word, 2), lag(word)),
          after = paste(lead(word), lead(word, 2), lead(word, 3))
@@ -235,8 +239,7 @@ tweets_tokenized %>%
   top_n(n = 10, wt = after) %>%
   knitr::kable(align = c('l', 'r', 'c', 'l'))
 
-           
-                         
+
                          
                          
                          
