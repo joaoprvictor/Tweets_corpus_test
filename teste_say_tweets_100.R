@@ -18,10 +18,10 @@ library(tidyverse)
 library(tidytext)
 
 # importando os APIs
-consumerKey = "Gyj1h5odB016PKZd3xw7YTDLU"
-consumerSecret = "ZlmjrQSlWWw00kgMENh2Zkj47dGnGqTRUavQTgnN5INgI6kiHr"
-accessToken = "724276541560070145-gb1nsV2PGmSOPK2V4lt0bD49CO7ydXN"
-accessSecret = "IgsY2wmyRvgwKQJVevTnuuOgMikzuI1UpIFrIb3pwWK6Q"
+consumerKey = "XXXXXXX"
+consumerSecret = "XXXXX"
+accessToken = "XXXXXXXXXXX"
+accessSecret = "XXXXX"
 
 #setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
 setup_twitter_oauth(consumerKey, consumerSecret, 
